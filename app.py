@@ -2,10 +2,16 @@ import streamlit as st
 import joblib
 import numpy as np
 from rdkit import Chem
-from rdkit.Chem import AllChem, Draw
+from rdkit.Chem import AllChem
 from rdkit.DataStructs import ConvertToNumpyArray
 import base64
 from io import BytesIO
+
+try:
+    from rdkit.Chem import Draw
+    DRAW_AVAILABLE = True
+except ImportError:
+    DRAW_AVAILABLE = False
 
 # -------------------------------
 # Page Config
@@ -411,6 +417,8 @@ def smiles_to_fp(smiles):
     return arr, mol
 
 def mol_to_b64(mol, size=(320, 200)):
+    if not DRAW_AVAILABLE:
+        return None
     img = Draw.MolToImage(mol, size=size, kekulize=True)
     buf = BytesIO()
     img.save(buf, format="PNG")
@@ -457,10 +465,13 @@ with right:
         mol_chk = Chem.MolFromSmiles(final_smiles)
         if mol_chk:
             b64 = mol_to_b64(mol_chk)
-            st.markdown(
-                f'<div class="mol-img-wrap"><img src="data:image/png;base64,{b64}"/></div>',
-                unsafe_allow_html=True
-            )
+            if b64:
+                st.markdown(
+                    f'<div class="mol-img-wrap"><img src="data:image/png;base64,{b64}"/></div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown('<div class="mol-placeholder"><div class="mol-placeholder-icon">🔬</div><div class="mol-placeholder-text">Molecule loaded (preview unavailable)</div></div>', unsafe_allow_html=True)
             st.markdown(f'<div class="smiles-pill">📌 {final_smiles}</div>', unsafe_allow_html=True)
         else:
             st.error("⚠️ Invalid SMILES string — cannot render molecule.")
